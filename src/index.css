@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Inter:wght@400;600;700;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Noto Serif TC", serif;
+  --font-sans: "Inter", sans-serif;
+  
+  --color-natural-bg: #FDFBF7;
+  --color-natural-header: #F9F6F0;
+  --color-natural-text: #2C2C2C;
+  --color-natural-text-muted: #3E3E3E;
+  --color-natural-accent: #5A5A40;
+  --color-natural-terracotta: #A64B2A;
+  --color-natural-border: #E2DCC8;
+}
+
+.serif {
+  font-family: 'Noto Serif TC', serif;
+}
+
+.sans {
+  font-family: 'Inter', sans-serif;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(1.5rem) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Base custom form number inputs arrow styling bypass */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
