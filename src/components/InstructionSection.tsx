@@ -158,9 +158,13 @@ function doGet() {
       var nameIdx = getIndex(["訂購人"], 2);
       var productIdx = getIndex(["月餅口味", "飲料名稱"], 3);
       
-      // 動態偵測「數量」與「總金額」
+      // 動態偵測「數量」與「總金額」及新的聯絡欄位
       var qtyIdx = getIndex(["數量"], 4);
       var valIdx = getIndex(["總金額"], 5);
+      var phoneIdx = getIndex(["手機號碼", "手機"], -1);
+      var emailIdx = getIndex(["電子信箱", "email", "e-mail", "電子郵件"], -1);
+      var addressIdx = getIndex(["送貨地址", "收件地址", "地址"], -1);
+      var deliveryDateIdx = getIndex(["送貨日期", "期望送貨日期", "送貨日"], -1);
 
       orders = orderData.slice(1).map(function(row) {
         return {
@@ -169,7 +173,11 @@ function doGet() {
           name: row[nameIdx] ? row[nameIdx].toString().trim() : "",
           mooncakes: row[productIdx] ? row[productIdx].toString().trim() : "",
           quantity: parseInt(row[qtyIdx]) || 0,
-          totalPrice: parseFloat(row[valIdx]) || 0
+          totalPrice: parseFloat(row[valIdx]) || 0,
+          phone: phoneIdx !== -1 && row[phoneIdx] ? row[phoneIdx].toString().trim() : "",
+          email: emailIdx !== -1 && row[emailIdx] ? row[emailIdx].toString().trim() : "",
+          address: addressIdx !== -1 && row[addressIdx] ? row[addressIdx].toString().trim() : "",
+          deliveryDate: deliveryDateIdx !== -1 && row[deliveryDateIdx] ? row[deliveryDateIdx].toString().trim() : ""
         };
       });
     }
@@ -202,7 +210,7 @@ function doPost(e) {
       // 如果今天的工作表不存在，則在此時自動初始化建立！
       if (!sheet) {
         sheet = ss.insertSheet(today, 1); // 參數 1 代表將新工作表移到第一個分頁，方便每天打開第一眼看到
-        const headers = ["訂單編號", "時間戳記", "訂購人", "月餅口味", "數量", "總金額"];
+        const headers = ["訂單編號", "時間戳記", "訂購人", "月餅口味", "數量", "總金額", "手機號碼", "電子信箱", "送貨地址", "送貨日期"];
         sheet.appendRow(headers);
         
         // 美化工作表：凍結首列並加粗底色
@@ -213,21 +221,30 @@ function doPost(e) {
              .setHorizontalAlignment("center");
       }
 
-      const orderId = Utilities.getUuid(); // 產生唯一的 UUID 作為訂單編號
-      
-      // 依照欄位順序寫入：
-      // 1.訂單編號, 2.時間戳記, 3.訂購人, 4.月餅口味, 5.數量, 6.總金額
-      const newRow = [
-        orderId,
-        new Date(),
-        data.name || "無名氏",
-        data.mooncakes || "",
-        parseInt(data.quantity) || 1,
-        parseFloat(data.totalPrice) || 0
-      ];
-      
-      sheet.appendRow(newRow);
-      return createJsonResponse({ status: "success", message: "訂單已成功記錄至工作表 " + today, orderId: orderId });
+      const items = Array.isArray(data) ? data : [data];
+      let orderIds = [];
+
+      for (let j = 0; j < items.length; j++) {
+        const item = items[j];
+        const orderId = item.orderId || Utilities.getUuid(); // 產生或保留唯一的 UUID 作為訂單編號
+        orderIds.push(orderId);
+        
+        // 依照欄位順序寫入：
+        const newRow = [
+          orderId,
+          new Date(),
+          item.name || "無名氏",
+          item.mooncakes || "",
+          parseInt(item.quantity) || 1,
+          parseFloat(item.totalPrice) || 0,
+          item.phone || "",
+          item.email || "",
+          item.address || "",
+          item.deliveryDate || ""
+        ];
+        sheet.appendRow(newRow);
+      }
+      return createJsonResponse({ status: "success", message: "訂單已成功記錄至工作表 " + today, orderIds: orderIds });
     }
 
     // ─── 對於 [修改 (Update)] 與 [刪除 (Delete)] ───
@@ -261,6 +278,10 @@ function doPost(e) {
           updateCell("月餅口味", data.mooncakes);
           updateCell("數量", parseInt(data.quantity) || 1);
           updateCell("總金額", parseFloat(data.totalPrice) || 0);
+          updateCell("手機號碼", data.phone || "");
+          updateCell("電子信箱", data.email || "");
+          updateCell("送貨地址", data.address || "");
+          updateCell("送貨日期", data.deliveryDate || "");
 
           return createJsonResponse({ status: "success", message: "訂單更新成功！" });
         }

@@ -1,40 +1,20 @@
-# 安琪拉烘焙工作室月餅訂購系統 🥮
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+</div>
 
-這是一個方便、美觀且直覺的中秋月餅訂購系統，專為安琪拉烘焙工作室打造。系統支援本地模擬器快取與雲端 Google 試算表（Google Sheets / GAS API）雙向同步，讓主辦人可以輕鬆管理訂單。
+# Run and deploy your AI Studio app
 
-## ✨ 核心特色
+This contains everything you need to run your app locally.
 
-- **🥮 多樣月餅口味**：支援廣式蓮蓉月餅、豆沙蛋黃酥、冰皮奶黃月餅、流心奶黃月餅等多種精美口味與規格。
-- **📊 即時統計儀表板**：自動計算總訂單量、總銷售金額、最受歡迎月餅、已訂購人數等，並附有月餅口味占比與每日訂量趨勢分析。
-- **☁️ Google 試算表同步 (GAS)**：支援設定 Google Apps Script Web App URL。一經連接，所有訂單的建立、修改與刪除均能即時同步至雲端試算表。
-- **📅 每日自動分頁**：雲端後端支援自動依日期建立分頁（例如 `2026-05-29`），每日訂單自動歸檔，方便對帳。
-- **📋 複製為 Excel 格式**：一鍵複製點單為 Tab 分隔格式，可直接貼上至 Excel、Google 試算表或 Numbers。
-- **💻 本地沙盒模式**：在未連接 GAS 時，系統會自動使用本地瀏覽器快取（LocalStorage）進行模擬操作。
+View your app in AI Studio: https://ai.studio/apps/13cd066f-ff9b-4f44-be84-7bcf8b594827
 
-## 🚀 本地開發與執行
+## Run Locally
 
-### 前提條件
-- 已安裝 [Node.js](https://nodejs.org/)
+**Prerequisites:**  Node.js
 
-### 執行步驟
 
-1. **安裝依賴套件**：
-   ```bash
-   npm install
-   ```
-   *(在 Windows PowerShell 中若遇到執行原則限制，請改用 `npm.cmd install`)*
-
-2. **啟動開發伺服器**：
-   ```bash
-   npm run dev
-   ```
-
-3. **瀏覽網頁**：
-   開啟瀏覽器並造訪控制台顯示的網址（通常為 `http://localhost:3000`）。
-
-## 🛠️ 技術棧
-
-- **前端核心**：React 19 + TypeScript
-- **樣式設計**：Tailwind CSS (Vite 插件)
-- **圖示庫**：Lucide React
-- **建置工具**：Vite 6
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

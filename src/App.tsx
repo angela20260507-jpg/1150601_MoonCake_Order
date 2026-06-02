@@ -183,40 +183,87 @@ export default function App() {
       // ☁️ CLOUD GOOGLE SHEETS SYNC MODE
       const action: ActionType = formData.orderId ? 'update' : 'create';
       try {
-        // Map to both standard formats to ensure bulletproof backend field resolution
-        const postBody = {
-          action,
-          data: {
+        if (formData.isCartSubmit) {
+          // Flatten cart items and submit them sequentially to maintain 100% backward compatibility
+          // with older Google Apps Script deployments that do not handle arrays of rows.
+          for (const item of formData.cartItems) {
+            const currentItemPayload = {
+              action,
+              data: {
+                name: formData.name,
+                mooncakes: item.mooncakeName,
+                drink: item.mooncakeName, // beverage legacy field fallback
+                quantity: item.quantity,
+                totalPrice: item.quantity * item.price,
+                phone: formData.phone,
+                email: formData.email,
+                address: formData.address,
+                deliveryDate: formData.deliveryDate
+              }
+            };
+
+            const response = await fetch(gasUrl, {
+              method: 'POST',
+              mode: 'cors',
+              headers: {
+                'Content-Type': 'text/plain;charset=utf-8', // GAS can throw preflight blockers sometimes if application/json
+              },
+              body: JSON.stringify(currentItemPayload)
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP 伺服器錯誤！代碼：${response.status}`);
+            }
+
+            const resData = await response.json();
+            if (resData.status !== 'success') {
+              throw new Error(resData.message || '試算表寫入失敗');
+            }
+          }
+
+          addAlert('success', '🎉 購物車全部商品已成功寫入今日試算表！中秋快樂！');
+          setEditingOrder(null);
+          await syncWithCloud(gasUrl);
+        } else {
+          const postData = {
             orderId: formData.orderId,
             name: formData.name,
             mooncakes: formData.mooncakes,
             drink: formData.mooncakes, // beverage legacy field fallback
             quantity: formData.quantity,
-            totalPrice: formData.totalPrice
+            totalPrice: formData.totalPrice,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address,
+            deliveryDate: formData.deliveryDate
+          };
+
+          const postBody = {
+            action,
+            data: postData
+          };
+
+          const response = await fetch(gasUrl, {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify(postBody)
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP 伺服器錯誤！代碼：${response.status}`);
           }
-        };
 
-        const response = await fetch(gasUrl, {
-          method: 'POST',
-          mode: 'cors',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8', // GAS can throw preflight blockers sometimes if application/json
-          },
-          body: JSON.stringify(postBody)
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP 伺服器錯誤！代碼：${response.status}`);
-        }
-
-        const resData = await response.json();
-        if (resData.status === 'success') {
-          addAlert('success', action === 'create' ? '🎉 點單已成功寫入今日試算表！中秋快樂！' : '✍️ 試算表訂單修改成功！');
-          setEditingOrder(null);
-          // Re-fetch orders from sheets to update UI
-          await syncWithCloud(gasUrl);
-        } else {
-          throw new Error(resData.message || '試算表寫入失敗');
+          const resData = await response.json();
+          if (resData.status === 'success') {
+            addAlert('success', '✍️ 試算表訂單修改成功！');
+            setEditingOrder(null);
+            await syncWithCloud(gasUrl);
+          } else {
+            throw new Error(resData.message || '試算表寫入失敗');
+          }
         }
       } catch (err: any) {
         console.error("Cloud POST error:", err);
@@ -239,22 +286,46 @@ export default function App() {
                 name: formData.name,
                 mooncakes: formData.mooncakes,
                 quantity: formData.quantity,
-                totalPrice: formData.totalPrice
+                totalPrice: formData.totalPrice,
+                phone: formData.phone,
+                email: formData.email,
+                address: formData.address,
+                deliveryDate: formData.deliveryDate
               };
             }
             return o;
           });
           addAlert('success', '✍️ 已修改訂單資訊（本地模擬器模式）');
           setEditingOrder(null);
+        } else if (formData.isCartSubmit) {
+          // Create batch items
+          const newOrders: Order[] = formData.cartItems.map((item: any, idx: number) => ({
+            orderId: `local-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+            timestamp: currentDateStr,
+            name: formData.name,
+            mooncakes: item.mooncakeName,
+            quantity: item.quantity,
+            totalPrice: item.quantity * item.price,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address,
+            deliveryDate: formData.deliveryDate
+          }));
+          updatedOrders = [...newOrders, ...updatedOrders];
+          addAlert('success', `🎉 購物車內 ${formData.cartItems.length} 項品項成功結帳送出！（本地模擬器模式）`);
         } else {
-          // Create action
+          // Create fallback single action
           const newOrder: Order = {
             orderId: `local-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             timestamp: currentDateStr,
             name: formData.name,
             mooncakes: formData.mooncakes,
             quantity: formData.quantity,
-            totalPrice: formData.totalPrice
+            totalPrice: formData.totalPrice,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address,
+            deliveryDate: formData.deliveryDate
           };
           updatedOrders.unshift(newOrder);
           addAlert('success', '🎉 點單成功遞交！已收錄至統計中（本地模擬器模式）');
@@ -417,32 +488,28 @@ export default function App() {
         {/* Dynamic Statistical Metrics Section */}
         <Statistics orders={orders} menu={menu} />
 
-        {/* Bento Grid layout dividing OrderForm and OrderList */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Spacious layout stack dividing OrderForm and OrderList */}
+        <div className="space-y-10">
           
-          {/* Left Column (span 4): Interactive Ordering Form */}
-          <div className="lg:col-span-4">
-            <OrderForm 
-              menu={menu}
-              onSubmit={handleOrderSubmit}
-              editingOrder={editingOrder}
-              onCancelEdit={() => setEditingOrder(null)}
-              isSubmitting={isSubmitting}
-            />
-          </div>
+          {/* Interactive Ordering Form / Shopping Cart */}
+          <OrderForm 
+            menu={menu}
+            onSubmit={handleOrderSubmit}
+            editingOrder={editingOrder}
+            onCancelEdit={() => setEditingOrder(null)}
+            isSubmitting={isSubmitting}
+          />
 
-          {/* Right Column (span 8): Detailed Order Registries */}
-          <div className="lg:col-span-8">
-            <OrderList 
-              orders={orders}
-              menu={menu}
-              onEdit={handleEditClick}
-              onDelete={handleOrderDelete}
-              isLoading={isLoading}
-              gasUrl={gasUrl}
-              onRefresh={handleRefresh}
-            />
-          </div>
+          {/* Detailed Order Registries */}
+          <OrderList 
+            orders={orders}
+            menu={menu}
+            onEdit={handleEditClick}
+            onDelete={handleOrderDelete}
+            isLoading={isLoading}
+            gasUrl={gasUrl}
+            onRefresh={handleRefresh}
+          />
 
         </div>
       </main>
