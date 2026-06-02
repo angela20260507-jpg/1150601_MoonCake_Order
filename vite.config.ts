@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: process.env.NODE_ENV === 'production' ? '/1150601_MoonCake_Order/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
