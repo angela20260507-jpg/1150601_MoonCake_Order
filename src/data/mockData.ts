@@ -65,7 +65,11 @@ export const INITIAL_MOCK_ORDERS: Order[] = [
     name: "陳怡君 (HR)",
     mooncakes: "蛋黃酥6粒裝禮盒",
     quantity: 2,
-    totalPrice: 1000
+    totalPrice: 1000,
+    phone: "0912-345678",
+    email: "yichun.chen@gmail.com",
+    address: "台北市信義區松智路1號 (南山大樓 15 樓)",
+    deliveryDate: "2026-06-15"
   },
   {
     orderId: "mock-order-002",
@@ -73,7 +77,11 @@ export const INITIAL_MOCK_ORDERS: Order[] = [
     name: "黃建宏 (Engineering)",
     mooncakes: "金莎綠豆椪6粒裝",
     quantity: 1,
-    totalPrice: 450
+    totalPrice: 450,
+    phone: "0921-987654",
+    email: "ken.huang@gmail.com",
+    address: "新北市板橋區縣民大道二段7號 (板橋車站大樓)",
+    deliveryDate: "2026-06-18"
   },
   {
     orderId: "mock-order-003",
@@ -81,7 +89,11 @@ export const INITIAL_MOCK_ORDERS: Order[] = [
     name: "李美玲 (Sales)",
     mooncakes: "綠豆椪6粒裝禮盒",
     quantity: 1,
-    totalPrice: 400
+    totalPrice: 400,
+    phone: "0933-555888",
+    email: "meiling.li@gmail.com",
+    address: "台北市大安區敦化南路二段207號 (遠企中心敦南大樓)",
+    deliveryDate: "2026-06-12"
   },
   {
     orderId: "mock-order-004",
@@ -89,7 +101,11 @@ export const INITIAL_MOCK_ORDERS: Order[] = [
     name: "張雅婷 (Design)",
     mooncakes: "綜合禮盒",
     quantity: 3,
-    totalPrice: 1800
+    totalPrice: 1800,
+    phone: "0988-112233",
+    email: "yating.chang@gmail.com",
+    address: "台中市西屯區台灣大道三段99號 (台中市政府大樓)",
+    deliveryDate: "2026-06-20"
   },
   {
     orderId: "mock-order-005",
@@ -97,7 +113,11 @@ export const INITIAL_MOCK_ORDERS: Order[] = [
     name: "王宇航 (Marketing)",
     mooncakes: "帝王酥6粒裝禮盒",
     quantity: 2,
-    totalPrice: 1200
+    totalPrice: 1200,
+    phone: "0955-443322",
+    email: "yuhang.wang@gmail.com",
+    address: "高雄市苓雅區四維三路2號 (高雄市政府)",
+    deliveryDate: "2026-06-25"
   }
 ];
 

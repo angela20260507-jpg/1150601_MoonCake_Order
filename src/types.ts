@@ -18,6 +18,17 @@ export interface Order {
   mooncakes: string;
   quantity: number;
   totalPrice: number;
+  phone?: string;
+  email?: string;
+  address?: string;
+  deliveryDate?: string;
+}
+
+export interface CartItem {
+  id: string;
+  mooncakeName: string;
+  quantity: number;
+  price: number;
 }
 
 export type ActionType = 'create' | 'update' | 'delete';

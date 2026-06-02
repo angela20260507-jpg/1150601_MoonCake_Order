@@ -76,14 +76,18 @@ export default function OrderList({
   const copyToExcelFormat = () => {
     if (orders.length === 0) return;
     
-    const headers = ["訂單編號", "時間戳記", "訂購人", "月餅口味", "數量", "總金額"];
+    const headers = ["訂單編號", "時間戳記", "訂購人", "月餅口味", "數量", "總金額", "手機號碼", "電子信箱", "送貨地址", "送貨日期"];
     const rows = orders.map(order => [
       order.orderId,
       order.timestamp ? new Date(order.timestamp).toLocaleString('zh-TW') : new Date().toLocaleString('zh-TW'),
       order.name,
       order.mooncakes,
       order.quantity,
-      order.totalPrice
+      order.totalPrice,
+      order.phone || "",
+      order.email || "",
+      order.address || "",
+      order.deliveryDate || ""
     ]);
 
     const csvContent = [headers.join("\t"), ...rows.map(row => row.join("\t"))].join("\n");
@@ -205,6 +209,7 @@ export default function OrderList({
               <thead>
                 <tr className="bg-natural-header border-b border-natural-border text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider">
                   <th className="py-3 px-4">訂購人與時間</th>
+                  <th className="py-3 px-4">聯絡與送貨資訊</th>
                   <th className="py-3 px-4">訂購月餅口味</th>
                   <th className="py-3 px-4 text-center">數量 (盒)</th>
                   <th className="py-3 px-4 text-right">小計</th>
@@ -229,6 +234,35 @@ export default function OrderList({
                         <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5 font-mono">
                           <Clock size={11} />
                           {formatTime(order.timestamp)}
+                        </div>
+                      </td>
+
+                      {/* Contact & Delivery Info */}
+                      <td className="py-4 px-4 max-w-[240px]">
+                        <div className="space-y-1 text-slate-650">
+                          {order.phone && (
+                            <div className="font-semibold text-[#2C2C2C] flex items-center gap-1 font-mono text-[11px]">
+                              <span className="text-slate-400 select-none">📞</span> {order.phone}
+                            </div>
+                          )}
+                          {order.email && (
+                            <div className="text-slate-500 flex items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-mono" title={order.email}>
+                              <span className="text-slate-400 select-none">✉️</span> {order.email}
+                            </div>
+                          )}
+                          {order.address && (
+                            <div className="text-[11px] text-slate-500 font-medium leading-normal break-all" title={order.address}>
+                              <span className="text-slate-400 select-none">📍</span> {order.address}
+                            </div>
+                          )}
+                          {order.deliveryDate && (
+                            <div className="text-[11px] text-amber-700 font-bold flex items-center gap-1">
+                              <span className="text-amber-500 select-none">📅</span> 送貨日：{order.deliveryDate}
+                            </div>
+                          )}
+                          {!order.phone && !order.email && !order.address && !order.deliveryDate && (
+                            <span className="text-[10px] text-slate-400 italic">無提供聯絡資訊</span>
+                          )}
                         </div>
                       </td>
 
@@ -364,6 +398,32 @@ export default function OrderList({
                       )}
                     </div>
                   </div>
+
+                  {/* Contact details for mobile */}
+                  {(order.phone || order.email || order.address || order.deliveryDate) && (
+                    <div className="bg-white/80 rounded-xl border border-natural-border p-2.5 space-y-1.5 text-xs text-slate-650">
+                      {order.phone && (
+                        <div className="flex items-center gap-1.5 text-slate-700 font-semibold font-mono text-[11px]">
+                          <span className="text-slate-400 select-none">📞</span> 手機：{order.phone}
+                        </div>
+                      )}
+                      {order.email && (
+                        <div className="flex items-center gap-1.5 text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-mono" title={order.email}>
+                          <span className="text-slate-400 select-none">✉️</span> 信箱：{order.email}
+                        </div>
+                      )}
+                      {order.address && (
+                        <div className="flex items-start gap-1.5 text-[11px] text-slate-500 font-medium leading-relaxed break-all" title={order.address}>
+                          <span className="text-slate-400 select-none shrink-0 mt-0.5">📍</span> 地址：{order.address}
+                        </div>
+                      )}
+                      {order.deliveryDate && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-amber-750 font-bold">
+                          <span className="text-amber-500 select-none">📅</span> 送貨日：{order.deliveryDate}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Taste Flavour description */}
                   <div className="text-xs bg-white rounded-xl border border-natural-border p-3 flex items-center gap-3">

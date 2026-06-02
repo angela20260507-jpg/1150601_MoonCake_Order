@@ -1,0 +1,6 @@
+{
+  "name": "安琪拉烘焙工作室月餅訂購系統",
+  "description": "方便的安琪拉烘焙工作室中秋月餅訂購系統，支援 Google Sheets / GAS API 後端，即時點單、自動統計、客製口味與包裝規格、日曆統計等豐富功能。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
