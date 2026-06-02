@@ -47,7 +47,7 @@ export default function OrderList({
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
-    const flavourName = order.mooncakes || (order as any).drink || "廣式蓮蓉月餅";
+    const flavourName = order.mooncakes || "廣式蓮蓉月餅";
     const matchesSearch = 
       order.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       flavourName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -58,7 +58,7 @@ export default function OrderList({
   });
 
   // Extract distinct flavors ordered to build filter list
-  const uniqueFlavours = Array.from(new Set(orders.map(o => o.mooncakes || (o as any).drink || "廣式蓮蓉月餅")));
+  const uniqueFlavours = Array.from(new Set(orders.map(o => o.mooncakes || "廣式蓮蓉月餅")));
 
   // Format date helper
   const formatTime = (timestamp: any) => {
@@ -237,7 +237,7 @@ export default function OrderList({
                         <div className="flex items-center gap-2.5">
                           <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-natural-border shrink-0 select-none shadow-xs">
                             <img 
-                              src={getOrderItemImage(order.mooncakes || (order as any).drink || "廣式蓮蓉月餅")} 
+                              src={getOrderItemImage(order.mooncakes || "廣式蓮蓉月餅")} 
                               alt={order.mooncakes || "月餅"}
                               referrerPolicy="no-referrer"
                               className="w-full h-full object-cover"
@@ -248,7 +248,7 @@ export default function OrderList({
                           </div>
                           <div>
                             <span className="font-serif font-bold text-[#2C2C2C] block">
-                              {order.mooncakes || (order as any).drink || "廣式蓮蓉月餅"}
+                              {order.mooncakes || "廣式蓮蓉月餅"}
                             </span>
                           </div>
                         </div>
@@ -369,7 +369,7 @@ export default function OrderList({
                   <div className="text-xs bg-white rounded-xl border border-natural-border p-3 flex items-center gap-3">
                     <div className="relative w-11 h-11 rounded-lg overflow-hidden bg-slate-100 border border-natural-border shrink-0 select-none shadow-xs">
                       <img 
-                        src={getOrderItemImage(order.mooncakes || (order as any).drink || "廣式蓮蓉月餅")} 
+                        src={getOrderItemImage(order.mooncakes || "廣式蓮蓉月餅")} 
                         alt={order.mooncakes || "月餅"}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
@@ -380,7 +380,7 @@ export default function OrderList({
                     </div>
                     <div>
                       <span className="font-serif font-bold text-[#2C2C2C] block text-[13.5px]">
-                        {order.mooncakes || (order as any).drink || "廣式蓮蓉月餅"}
+                        {order.mooncakes || "廣式蓮蓉月餅"}
                       </span>
                     </div>
                   </div>
@@ -388,7 +388,7 @@ export default function OrderList({
                   {/* Quantitative pricing */}
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-natural-border">
                     <div className="text-gray-400 font-semibold font-mono text-[10px]">
-                      單價：${menu.find(m => m.name === (order.mooncakes || (order as any).drink))?.price || 0} / 盒
+                      單價：${menu.find(m => m.name === order.mooncakes)?.price || 0} / 盒
                     </div>
                     <div className="flex items-baseline gap-2">
                       <span className="text-slate-500 font-mono font-medium">共 {order.quantity} 盒</span>

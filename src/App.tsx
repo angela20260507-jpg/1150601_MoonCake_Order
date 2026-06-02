@@ -13,7 +13,6 @@ import { DEFAULT_MENU, INITIAL_MOCK_ORDERS } from './data/mockData';
 import OrderForm from './components/OrderForm';
 import OrderList from './components/OrderList';
 import Statistics from './components/Statistics';
-import InstructionSection from './components/InstructionSection';
 
 interface BannerAlert {
   id: string;
@@ -21,12 +20,12 @@ interface BannerAlert {
   text: string;
 }
 
-// Helper to safely normalize orders to support mooncakes & legacy beverage fields
+// Helper to safely normalize orders
 const normalizeOrders = (ordersList: any[]): Order[] => {
   if (!ordersList || !Array.isArray(ordersList)) return [];
   return ordersList.map((order: any) => ({
     ...order,
-    mooncakes: order.mooncakes || order.drink || "廣式蓮蓉月餅",
+    mooncakes: order.mooncakes || "廣式蓮蓉月餅",
     quantity: typeof order.quantity === 'number' ? order.quantity : parseInt(order.quantity) || 1,
     totalPrice: typeof order.totalPrice === 'number' ? order.totalPrice : parseFloat(order.totalPrice) || 0
   }));
@@ -34,18 +33,13 @@ const normalizeOrders = (ordersList: any[]): Order[] => {
 
 export default function App() {
   // 1. Core state
-  const [gasUrl, setGasUrl] = useState<string>(() => {
-    return localStorage.getItem('gas_api_url') || 'https://script.google.com/macros/s/AKfycbzKRS1L-uvdn7ZzdyK8ZLet8cOGCkkhXzGx2bZIXx7GAMd9F7g2PN6RFSEZJpjCu-5O/exec';
-  });
+  const gasUrl = localStorage.getItem('gas_api_url') || 'https://script.google.com/macros/s/AKfycbzKRS1L-uvdn7ZzdyK8ZLet8cOGCkkhXzGx2bZIXx7GAMd9F7g2PN6RFSEZJpjCu-5O/exec';
   const [menu, setMenu] = useState<Mooncake[]>(DEFAULT_MENU);
   const [orders, setOrders] = useState<Order[]>([]);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   
   // 2. Status flags
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isTestingUrl, setIsTestingUrl] = useState<boolean>(false);
-  const [testSuccess, setTestSuccess] = useState<boolean>(false);
-  const [testError, setTestError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // 3. User alerts state
@@ -128,51 +122,7 @@ export default function App() {
     }
   }, [gasUrl, syncWithCloud, addAlert]);
 
-  // 5. Test connection handle
-  const handleTestConnection = async () => {
-    if (!gasUrl) return;
-    setIsTestingUrl(true);
-    setTestSuccess(false);
-    setTestError(null);
-    try {
-      const response = await fetch(gasUrl, {
-        method: 'GET',
-        mode: 'cors'
-      });
-      if (!response.ok) {
-        throw new Error(`回傳 HTTP 狀態碼：${response.status}`);
-      }
-      const data = await response.json();
-      if (data && ('menu' in data || 'orders' in data)) {
-        setTestSuccess(true);
-        addAlert('success', '✅ 連線成功！工作表格式相容且握手完畢。');
-      } else {
-        throw new Error('回傳 JSON 格式並非合法的月餅訂購 API 模型');
-      }
-    } catch (err: any) {
-      setTestError(err.message || '無法連線：請確認 GAS 連線網址是否正確並已公開。');
-      addAlert('error', '⚠️ GAS 連線測試失敗，請檢查權限及 URL 結構。');
-    } finally {
-      setIsTestingUrl(false);
-    }
-  };
 
-  // 6. Save new/clear GAS Web App URL
-  const handleSaveGasUrl = (newUrl: string) => {
-    if (newUrl) {
-      localStorage.setItem('gas_api_url', newUrl);
-      setGasUrl(newUrl);
-      addAlert('success', '💾 已儲存 Google Apps Script 雲端連線網址！正在撈取遠端試算表數據...');
-    } else {
-      localStorage.removeItem('gas_api_url');
-      setGasUrl('');
-      // Reset database cache to preloaded mock orders
-      const local = localStorage.getItem('local_orders') || JSON.stringify(INITIAL_MOCK_ORDERS);
-      setOrders(normalizeOrders(JSON.parse(local)));
-      setMenu(DEFAULT_MENU);
-      addAlert('info', '💡 已切換回「本地模擬器模式」，點單皆暫存在本地瀏覽器快取中。');
-    }
-  };
 
   // 7. Order Action Handle (Create & Update)
   const handleOrderSubmit = async (formData: any) => {
@@ -183,14 +133,12 @@ export default function App() {
       // ☁️ CLOUD GOOGLE SHEETS SYNC MODE
       const action: ActionType = formData.orderId ? 'update' : 'create';
       try {
-        // Map to both standard formats to ensure bulletproof backend field resolution
         const postBody = {
           action,
           data: {
             orderId: formData.orderId,
             name: formData.name,
             mooncakes: formData.mooncakes,
-            drink: formData.mooncakes, // beverage legacy field fallback
             quantity: formData.quantity,
             totalPrice: formData.totalPrice
           }
@@ -404,15 +352,7 @@ export default function App() {
       {/* Main container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
         
-        {/* Instruction instructions & configuration card */}
-        <InstructionSection 
-          gasUrl={gasUrl}
-          onSaveUrl={handleSaveGasUrl}
-          isTestingUrl={isTestingUrl}
-          testError={testError}
-          testSuccess={testSuccess}
-          onTestConnection={handleTestConnection}
-        />
+
 
         {/* Dynamic Statistical Metrics Section */}
         <Statistics orders={orders} menu={menu} />
