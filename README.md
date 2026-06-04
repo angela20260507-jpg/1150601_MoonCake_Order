@@ -1,20 +1,36 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🥮 安琪拉烘焙工作室月餅訂購系統
 
-# Run and deploy your AI Studio app
+一個為中秋月餅訂購打造的精美前端系統，支援本地沙盒與 Google Sheets (GAS) 雲端雙模式。
 
-This contains everything you need to run your app locally.
+## ✨ 系統特色
+- ☁️ **雲端雙向同步**：支援 Google Sheets / GAS API 後端，訂單資料即時上傳與同步。
+- 📅 **每日分頁設計**：GAS 後端自動在 Google 試算表中按當天日期建立獨立工作表分頁（如 `2026-05-29`），方便按天管理。
+- 📊 **銷售數據統計**：即時分析總金額、總盒數、各種口味（如廣式蓮蓉、蛋黃酥、冰皮月餅）的銷售佔比。
+- 🔒 **修改保護機制**：防呆設計，送貨日前 30 天內訂單將自動鎖定，禁止修改或刪除。
+- 📋 **快速導出 Excel**：支援一鍵複製為 Tab 表格格式，在 Excel 或 Google 試算表中直接 `Ctrl+V` 貼上即可秒速成表。
+- 💻 **本地沙盒模擬**：無配置 GAS 網址時，自動進入本地沙盒模式（使用 LocalStorage），離線也能體驗完整功能。
 
-View your app in AI Studio: https://ai.studio/apps/13cd066f-ff9b-4f44-be84-7bcf8b594827
+## 🚀 快速開始
 
-## Run Locally
+### 本地開發與運行
 
-**Prerequisites:**  Node.js
+1. **安裝依賴套件**：
+   ```bash
+   npm install
+   ```
 
+2. **啟動開發伺服器**：
+   ```bash
+   npm run dev
+   ```
+   啟動後，在瀏覽器打開網頁即可開始使用。
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3. **生產環境建置**：
+   ```bash
+   npm run build
+   ```
+
+## 🛠️ 技術棧
+- **前端核心**：React + TypeScript + Vite
+- **樣式與動畫**：Tailwind CSS + Motion (Framer Motion)
+- **圖示庫**：Lucide React
