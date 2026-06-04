@@ -27,7 +27,8 @@ export default function Statistics({ orders, menu }: StatisticsProps) {
   const flavourBreakdown: Record<string, number> = {};
 
   orders.forEach(order => {
-    const flavourName = order.mooncakes || "廣式蓮蓉月餅";
+    // Flavour with legacy support fallback
+    const flavourName = order.mooncakes || (order as any).drink || "廣式蓮蓉月餅";
     flavourBreakdown[flavourName] = (flavourBreakdown[flavourName] || 0) + (order.quantity || 1);
   });
 

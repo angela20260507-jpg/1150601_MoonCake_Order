@@ -15,7 +15,7 @@ export interface Order {
   orderId: string;
   timestamp?: string | Date;
   name: string;
-  mooncakes: string;
+  mooncakes: string;   // Mooncake name, compatible with "drink"
   quantity: number;
   totalPrice: number;
   phone?: string;

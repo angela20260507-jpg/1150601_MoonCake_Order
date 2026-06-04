@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Trash2, Edit2, X, Plus, Minus, Check, Star, Calendar, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Trash2, Edit2, X, Plus, Minus, Check, Star, Calendar, ShoppingBag, User, Phone, Mail, MapPin } from 'lucide-react';
 import { Mooncake, Order, CartItem } from '../types';
 import { getMooncakeImage, cleanDescription } from '../data/mockData';
 
@@ -29,6 +29,8 @@ export default function OrderForm({
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
+  const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
+  const [shippingTemp, setShippingTemp] = useState<'room' | 'refrigerated'>('room');
 
   // B. Product selection fields (for adding to cart, or for immediate editing if in editMode)
   const [selectedMooncakeName, setSelectedMooncakeName] = useState("");
@@ -80,6 +82,10 @@ export default function OrderForm({
   // Calculate cart metrics
   const cartTotalAmount = cart.reduce((sum, item) => sum + item.quantity * item.price, 0);
   const cartTotalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const shippingFee = shippingMethod === 'pickup'
+    ? 0
+    : (cartTotalAmount >= 3800 ? 0 : (shippingTemp === 'refrigerated' ? 450 : 200));
+  const totalAmountWithShipping = cartTotalAmount + shippingFee;
 
   // Add Item to Shopping Cart
   const handleAddToCart = () => {
@@ -146,13 +152,25 @@ export default function OrderForm({
       alert("請填寫電子信箱帳號！");
       return;
     }
-    if (!address.trim()) {
+    if (shippingMethod === 'delivery' && !address.trim()) {
       alert("請填寫送貨地址！");
       return;
     }
     if (!deliveryDate.trim()) {
-      alert("請選擇預期送貨日期！");
+      alert("請選擇期望日期！");
       return;
+    }
+
+    if (shippingMethod === 'delivery') {
+      if (deliveryDate < "2026-08-20" || deliveryDate > "2026-09-18") {
+        alert("⚠️ 期望送貨日期僅可在民國 115 年的 08/20 至 09/18 (2026-08-20 至 2026-09-18) 區間內！");
+        return;
+      }
+    } else {
+      if (deliveryDate < "2026-08-20" || deliveryDate > "2026-09-22") {
+        alert("⚠️ 期望自取日期僅可在民國 115 年的 08/20 至 09/22 (2026-08-20 至 2026-09-22) 區間內！");
+        return;
+      }
     }
 
     // A. DIRECT ORDER ROW UPDATE MODE OR BATCH CART CHECKOUT MODE
@@ -177,13 +195,28 @@ export default function OrderForm({
         return;
       }
 
+      const finalCartItems = [...cart];
+      const appliedShippingFee = shippingMethod === 'pickup'
+        ? 0
+        : (cartTotalAmount >= 3800 ? 0 : (shippingTemp === 'refrigerated' ? 450 : 200));
+      
+      if (appliedShippingFee > 0 && shippingMethod === 'delivery') {
+        const shippingName = `運費 (${shippingTemp === 'refrigerated' ? '冷藏' : '常溫'})`;
+        finalCartItems.push({
+          id: `shipping-${Date.now()}`,
+          mooncakeName: shippingName,
+          quantity: 1,
+          price: appliedShippingFee
+        });
+      }
+
       const payload: any = {
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim(),
-        address: address.trim(),
+        address: shippingMethod === 'pickup' ? (address.trim() || "門市自取") : address.trim(),
         deliveryDate: deliveryDate,
-        cartItems: cart,
+        cartItems: finalCartItems,
         isCartSubmit: true
       };
 
@@ -196,6 +229,8 @@ export default function OrderForm({
       setEmail("");
       setAddress("");
       setDeliveryDate("");
+      setShippingMethod("delivery");
+      setShippingTemp("room");
     }
   };
 
@@ -224,60 +259,78 @@ export default function OrderForm({
         <form onSubmit={handleCheckoutSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="sans text-[11px] font-bold text-[#5A5A40] block mb-1 uppercase tracking-wider">
-                訂購人姓名 <span className="text-natural-terracotta">*</span>
+              <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                <User size={14} className="text-amber-800" /> 訂購人姓名 <span className="text-natural-terracotta">*</span>
               </label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="例如：陳大文"
-                className="w-full bg-white border border-natural-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-                required
-                disabled={isSubmitting}
-              />
+              <div className="relative group">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                  <User size={16} />
+                </span>
+                <input 
+                  type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="例如：陳大文"
+                  className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
             <div>
-              <label className="sans text-[11px] font-bold text-[#5A5A40] block mb-1 uppercase tracking-wider">
-                手機號碼 <span className="text-natural-terracotta">*</span>
+              <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                <Phone size={14} className="text-amber-800" /> 手機號碼 <span className="text-natural-terracotta">*</span>
               </label>
-              <input 
-                type="tel" 
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="例如：0912-345678"
-                className="w-full bg-white border border-natural-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-                required
-                disabled={isSubmitting}
-              />
+              <div className="relative group">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                  <Phone size={16} />
+                </span>
+                <input 
+                  type="tel" 
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="例如：0912-345678"
+                  className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="sans text-[11px] font-bold text-[#5A5A40] block mb-1 uppercase tracking-wider">
-                電子信箱 <span className="text-natural-terracotta">*</span>
+              <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                <Mail size={14} className="text-amber-800" /> 電子信箱 <span className="text-natural-terracotta">*</span>
               </label>
-              <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="例如：angela@example.com"
-                className="w-full bg-white border border-natural-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-                required
-                disabled={isSubmitting}
-              />
+              <div className="relative group">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                  <Mail size={16} />
+                </span>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="例如：angela@example.com"
+                  className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
             <div>
-              <label className="sans text-[11px] font-bold text-[#5A5A40] block mb-1 uppercase tracking-wider">
-                預期送貨日期 <span className="text-natural-terracotta">*</span>
+              <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                <Calendar size={14} className="text-amber-800" /> 預期送貨日期 <span className="text-natural-terracotta">*</span>
               </label>
-              <div className="relative">
+              <div className="relative group">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                  <Calendar size={16} />
+                </span>
                 <input 
                   type="date" 
                   value={deliveryDate}
                   onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="w-full bg-white border border-natural-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
+                  className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full font-mono"
                   required
                   disabled={isSubmitting}
                 />
@@ -286,18 +339,23 @@ export default function OrderForm({
           </div>
 
           <div>
-            <label className="sans text-[11px] font-bold text-[#5A5A40] block mb-1 uppercase tracking-wider">
-              送貨地址 <span className="text-natural-terracotta">*</span>
+            <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+              <MapPin size={14} className="text-amber-800" /> 送貨地址 <span className="text-natural-terracotta">*</span>
             </label>
-            <input 
-              type="text" 
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="例如：台北市信義區信義路五段7號"
-              className="w-full bg-white border border-natural-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-              required
-              disabled={isSubmitting}
-            />
+            <div className="relative group">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                <MapPin size={16} />
+              </span>
+              <input 
+                type="text" 
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="例如：台北市信義區信義路五段7號"
+                className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
 
           <div className="border-t border-dashed border-natural-border pt-4">
@@ -563,100 +621,310 @@ export default function OrderForm({
 
               {/* Total Row */}
               {cart.length > 0 && (
-                <div className="border-t border-dashed border-natural-border pt-2.5 flex justify-between items-baseline">
-                  <span className="text-[10.5px] font-bold text-slate-500">購物車總盒數: {cartTotalItems} 盒</span>
-                  <div className="text-right">
-                    <span className="text-[11px] font-semibold text-slate-600 mr-1.5">總應付金額:</span>
-                    <span className="serif text-xl font-bold text-natural-terracotta font-mono">${cartTotalAmount}</span>
+                <div className="border-t border-dashed border-natural-border pt-2.5 space-y-2.5">
+                  
+                  {/* Interactive Selector inside the Shopping Cart */}
+                  <div className="bg-amber-55/20 border border-amber-100 rounded-xl p-2.5 space-y-2">
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-bold text-[#5A5A40] flex items-center gap-1.5 select-none">
+                        <span>📦</span> 選擇取貨或運送方式：
+                      </span>
+                      <div className="grid grid-cols-2 gap-1.5 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShippingMethod('delivery')}
+                          className={`py-1 px-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
+                            shippingMethod === 'delivery'
+                              ? 'border-amber-700/60 bg-amber-100/75 text-amber-950 ring-1 ring-amber-700/30'
+                              : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>🚚 宅配到府</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShippingMethod('pickup')}
+                          className={`py-1 px-1.5 rounded-md text-[11px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 shrink-0 ${
+                            shippingMethod === 'pickup'
+                              ? 'border-amber-700/60 bg-amber-100/75 text-amber-950 ring-1 ring-amber-700/30'
+                              : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>🏬 現場自取</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {shippingMethod === 'delivery' && (
+                      <div className="space-y-1 pt-1.5 border-t border-dashed border-amber-200/50">
+                        <span className="text-[10px] font-bold text-[#5A5A40] flex items-center gap-1 select-none">
+                          <span>🌡️</span> 選擇宅配溫層：
+                        </span>
+                        <div className="grid grid-cols-2 gap-1.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setShippingTemp('room')}
+                            className={`py-1 px-1.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-0.5 shrink-0 ${
+                              shippingTemp === 'room'
+                                ? 'border-amber-700/50 bg-amber-50/60 text-amber-900 ring-1 ring-amber-700/20'
+                                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span>🍞 常溫 ($200)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShippingTemp('refrigerated')}
+                            className={`py-1 px-1.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-0.5 shrink-0 ${
+                              shippingTemp === 'refrigerated'
+                                ? 'border-sky-600/50 bg-sky-50/60 text-sky-900 ring-1 ring-sky-600/20'
+                                : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span>❄️ 冷藏 ($450)</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between text-xs font-semibold text-slate-500">
+                    <span>商品盒數 / 小計:</span>
+                    <span>{cartTotalItems} 盒 · ${cartTotalAmount} 元</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-xs font-semibold items-center">
+                    <span className="text-slate-500">
+                      {shippingMethod === 'pickup' ? (
+                        <span>🏬 現場自取費:</span>
+                      ) : (
+                        <span>🚚 運費 ({shippingTemp === 'refrigerated' ? '冷藏' : '常溫'}):</span>
+                      )}
+                    </span>
+                    {shippingMethod === 'pickup' ? (
+                      <span className="text-amber-700 font-bold bg-amber-50 border border-amber-100 rounded-md px-1.5 py-0.5 text-[10.5px] select-none">
+                        免運費 ($0) 🛍️
+                      </span>
+                    ) : cartTotalAmount >= 3800 ? (
+                      <span className="text-green-700 font-bold bg-green-50 border border-green-100 rounded-md px-1.5 py-0.5 text-[10.5px] select-none">
+                        免運費 (已滿 $3,800) 🎉
+                      </span>
+                    ) : (
+                      <span className="text-natural-terracotta font-bold font-mono">
+                        ${shippingFee} 元
+                      </span>
+                    )}
+                  </div>
+                  
+                  {shippingMethod === 'delivery' && cartTotalAmount < 3800 && (
+                    <div className="text-[10px] text-amber-700/80 text-right bg-amber-50/50 rounded-md p-1.5 border border-amber-100/50">
+                      💡 買滿 <span className="font-bold">$3,800</span> 免運費，還差 <span className="font-bold font-mono text-[#D97706] text-xs">${3800 - cartTotalAmount}</span> 元！
+                    </div>
+                  )}
+
+                  <div className="border-t border-slate-200/60 pt-2 flex justify-between items-baseline">
+                    <span className="text-[11px] font-bold text-[#2C2C2C]">
+                      {shippingMethod === 'pickup' ? '應付總金額 (自取):' : '應付總金額 (含運費):'}
+                    </span>
+                    <span className="serif text-xl font-bold text-natural-terracotta font-mono">${totalAmountWithShipping} 元</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Check out Form Information */}
-            <form onSubmit={handleCheckoutSubmit} className="space-y-3.5">
-              <h3 className="serif text-sm font-bold text-[#2C2C2C] flex items-center gap-1.5 border-b border-dotted border-natural-border pb-2">
-                <span>📍</span> 步驟三：填寫送貨與聯絡資訊
+            <form onSubmit={handleCheckoutSubmit} className="space-y-4">
+              <h3 className="serif text-sm font-bold text-[#2C2C2C] flex items-center gap-1.5 border-b border-dotted border-natural-border pb-2.5">
+                <span className="text-[#bf8f30]">📍</span> 步驟三：填寫送貨與聯絡資訊
               </h3>
 
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 {/* Name */}
                 <div>
-                  <label className="sans text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider block mb-0.5">
-                    訂購人姓名 <span className="text-natural-terracotta">*</span>
+                  <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                    <User size={14} className="text-amber-800" /> 訂購人姓名 <span className="text-natural-terracotta">*</span>
                   </label>
-                  <input 
-                    type="text" 
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="例如：陳大文"
-                    className="w-full bg-white border border-natural-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-                    required
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative group">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                      <User size={16} />
+                    </span>
+                    <input 
+                      type="text" 
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="例如：陳大文"
+                      className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
 
                 {/* Phone */}
                 <div>
-                  <label className="sans text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider block mb-0.5">
-                    訂購人手機號碼 <span className="text-natural-terracotta">*</span>
+                  <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                    <Phone size={14} className="text-amber-800" /> 訂購人手機號碼 <span className="text-natural-terracotta">*</span>
                   </label>
-                  <input 
-                    type="tel" 
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="例如：0912-345678"
-                    className="w-full bg-white border border-natural-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-                    required
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative group">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                      <Phone size={16} />
+                    </span>
+                    <input 
+                      type="tel" 
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="例如：0912-345678"
+                      className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="sans text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider block mb-0.5">
-                    電子信箱帳號 <span className="text-natural-terracotta">*</span>
+                  <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                    <Mail size={14} className="text-amber-800" /> 電子信箱帳號 <span className="text-natural-terracotta">*</span>
                   </label>
-                  <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="例如：angela@example.com"
-                    className="w-full bg-white border border-natural-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-                    required
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative group">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                      <Mail size={16} />
+                    </span>
+                    <input 
+                      type="email" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="例如：angela@example.com"
+                      className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
 
                 {/* Address */}
                 <div>
-                  <label className="sans text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider block mb-0.5">
-                    送貨地址 <span className="text-natural-terracotta">*</span>
+                  <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                    <MapPin size={14} className="text-amber-800" /> {shippingMethod === 'pickup' ? "自取備註 / 聯絡資訊" : "送貨地址"} {shippingMethod === 'delivery' && <span className="text-natural-terracotta">*</span>}
                   </label>
-                  <input 
-                    type="text" 
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="例如：台北市信義區信義路五段7號"
-                    className="w-full bg-white border border-natural-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium"
-                    required
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative group">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                      <MapPin size={16} />
+                    </span>
+                    <input 
+                      type="text" 
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder={shippingMethod === 'pickup' ? "例如：自取（板橋總店），或留空則預設「門市自取」" : "例如：台北市信義區信義路五段7號"}
+                      className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full"
+                      required={shippingMethod === 'delivery'}
+                      disabled={isSubmitting}
+                    />
+                  </div>
                 </div>
 
                 {/* Delivery Date */}
                 <div>
-                  <label className="sans text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-                    <Calendar size={12} className="text-natural-accent" /> 期望送貨日期 <span className="text-natural-terracotta">*</span>
+                  <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                    <Calendar size={14} className="text-amber-800" /> {shippingMethod === 'pickup' ? "期望自取日期" : "期望送貨日期"} <span className="text-natural-terracotta">*</span>
                   </label>
-                  <input 
-                    type="date" 
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
-                    className="w-full bg-white border border-natural-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-natural-terracotta outline-none text-[#2C2C2C] font-medium font-mono"
-                    required
-                    disabled={isSubmitting}
-                  />
+                  <div className="relative group">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-800 transition-colors">
+                      <Calendar size={16} />
+                    </span>
+                    <input 
+                      type="date" 
+                      value={deliveryDate}
+                      onChange={(e) => setDeliveryDate(e.target.value)}
+                      min="2026-08-20"
+                      max={shippingMethod === 'pickup' ? "2026-09-22" : "2026-09-18"}
+                      className="pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-medium hover:bg-white hover:border-slate-300 w-full font-mono font-bold"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <p className="text-[10.5px] text-amber-800 mt-1.5 font-medium bg-amber-50/75 rounded-lg border border-amber-200/50 px-2.5 py-1.5 leading-relaxed select-none">
+                    📅 <strong>日期區間限制：</strong>民國 115 年 08/20 至 {shippingMethod === 'pickup' ? '09/22' : '09/18'} 止 (2026-08-20 ~ {shippingMethod === 'pickup' ? '2026-09-22' : '2026-09-18'})。
+                  </p>
+                </div>
+
+                {/* Shipping Selection Block */}
+                <div className="bg-[#FAF8F5] border border-slate-200/60 rounded-xl p-3.5 space-y-3">
+                  <div>
+                    <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 uppercase tracking-wider mb-1">
+                      <span>📦</span> 選擇取貨/送貨方式 <span className="text-natural-terracotta">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 mt-1.5 font-sans">
+                      <button
+                        type="button"
+                        onClick={() => setShippingMethod('delivery')}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                          shippingMethod === 'delivery'
+                            ? 'border-amber-700/60 bg-amber-50 ring-1 ring-amber-700/50 font-extrabold text-amber-900'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="text-sm">🚚</span>
+                        <span>宅配到府</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShippingMethod('pickup')}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                          shippingMethod === 'pickup'
+                            ? 'border-amber-700/60 bg-amber-50 ring-1 ring-amber-700/50 font-extrabold text-amber-900'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="text-sm">🏬</span>
+                        <span>現場自取</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {shippingMethod === 'delivery' ? (
+                    <div className="pt-2.5 border-t border-dashed border-slate-200/80 space-y-2">
+                      <label className="sans text-xs font-bold text-[#5A5A40] flex items-center gap-1.5 uppercase tracking-wider">
+                        <span>🌡️</span> 選擇宅配溫層 <span className="text-natural-terracotta">*</span>
+                      </label>
+                      <p className="text-[10px] text-slate-400 font-sans">
+                        免運門檻：滿 $3,800 免運費；未滿常溫 $200 元、冷藏 $450 元
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => setShippingTemp('room')}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                            shippingTemp === 'room'
+                              ? 'border-amber-700/60 bg-amber-50/40 ring-1 ring-amber-700/50 font-extrabold text-amber-900'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="text-sm">🍞</span>
+                          <span>常溫配送 ($200)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShippingTemp('refrigerated')}
+                          className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                            shippingTemp === 'refrigerated'
+                              ? 'border-sky-600/60 bg-sky-50/45 ring-1 ring-sky-600/50 font-extrabold text-sky-900'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="text-sm">❄️</span>
+                          <span>冷藏配送 ($450)</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-2.5 border-t border-dashed border-slate-200/80">
+                      <p className="text-[11px] text-amber-700 bg-amber-50/60 border border-amber-100 rounded-lg p-2.5 flex items-start gap-1.5 leading-relaxed">
+                        <span>💡</span>
+                        <span>自取無需支付任何宅配運費！送貨地址欄位預設為「門市自取」，若有特別自取備註（如指定門市或保留時間），您仍可在上方文字欄位中填寫。</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -677,7 +945,7 @@ export default function OrderForm({
                 ) : (
                   <>
                     <span>🚀</span>
-                    確認結帳送出 (共 {cartTotalItems} 盒 / ${cartTotalAmount} 元)
+                    確認結帳送出 (共 {cartTotalItems} 盒 / {totalAmountWithShipping} 元)
                   </>
                 )}
               </button>

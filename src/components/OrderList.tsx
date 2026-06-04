@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { 
   Search, Trash2, Edit2, FileSpreadsheet, User, Clock, 
-  Copy, Check, Moon, CreditCard, ChevronRight, AlertCircle, RefreshCw 
+  Copy, Check, Moon, CreditCard, ChevronRight, AlertCircle, RefreshCw, Calendar 
 } from 'lucide-react';
 import { Order, Mooncake } from '../types';
 import { getMooncakeImage } from '../data/mockData';
@@ -31,9 +31,57 @@ export default function OrderList({
   onRefresh
 }: OrderListProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchDate, setSearchDate] = useState("");
   const [filterFlavour, setFilterFlavour] = useState("all");
   const [copiedCsv, setCopiedCsv] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Helper to normalize any date string to YYYY-MM-DD
+  const normalizeDate = (dateStr: string): string => {
+    if (!dateStr) return "";
+    const cleaned = dateStr.trim();
+    
+    // Try split by '/' or '-'
+    const parts = cleaned.split(/[-/]/);
+    if (parts.length === 3) {
+      const y = parts[0].trim();
+      const m = parts[1].trim().padStart(2, '0');
+      // Ignore possible times in the third segment if any
+      const d = parts[2].trim().split(/\s|T/)[0].padStart(2, '0');
+      if (y.length === 4 && !isNaN(Number(y)) && !isNaN(Number(m)) && !isNaN(Number(d))) {
+        return `${y}-${m}-${d}`;
+      }
+    }
+
+    // Fallback to JS standard Date parsing
+    const dateObj = new Date(cleaned);
+    if (!isNaN(dateObj.getTime())) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    return cleaned;
+  };
+
+  // Helper to determine if an order is locked (delivery date is within 30 days of today, or in the past)
+  const isOrderLocked = (deliveryDateStr?: string): boolean => {
+    if (!deliveryDateStr) return false;
+    const targetDate = new Date(normalizeDate(deliveryDateStr));
+    if (isNaN(targetDate.getTime())) return false;
+    
+    // Set times to midnight to calculate pure day differences
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = targetDate.getTime() - today.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+    // Locked if delivery date is less than 30 days from today
+    return diffDays < 30;
+  };
 
   // Helper to find the dynamic menu item's custom sheet imageUrl or description
   const getOrderItemImage = (mooncakesName: string) => {
@@ -47,18 +95,18 @@ export default function OrderList({
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
-    const flavourName = order.mooncakes || "廣式蓮蓉月餅";
-    const matchesSearch = 
-      order.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      flavourName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearchName = order.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+    const orderDeliveryDate = normalizeDate(order.deliveryDate || "");
+    const targetSearchDate = normalizeDate(searchDate);
+    const matchesSearchDate = !searchDate || orderDeliveryDate === targetSearchDate;
 
-    const matchesFlavour = filterFlavour === 'all' || flavourName === filterFlavour;
-
-    return matchesSearch && matchesFlavour;
+    return matchesSearchName && matchesSearchDate;
   });
 
+  const hasSearched = searchQuery.trim() !== "" && searchDate !== "";
+
   // Extract distinct flavors ordered to build filter list
-  const uniqueFlavours = Array.from(new Set(orders.map(o => o.mooncakes || "廣式蓮蓉月餅")));
+  const uniqueFlavours = Array.from(new Set(orders.map(o => o.mooncakes || (o as any).drink || "廣式蓮蓉月餅")));
 
   // Format date helper
   const formatTime = (timestamp: any) => {
@@ -114,10 +162,10 @@ export default function OrderList({
         <div>
           <h2 className="serif text-xl font-bold text-[#3E3E3E] flex items-center gap-2">
             <span className="text-xl">📋</span>
-            當日訂購點單細目
+            查詢訂購人訂單明細
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            訂購人填妥送出的點單即時匯整於此。您可以對其進行搜尋、編輯或是從試算表中剔除。
+            請在下方輸入訂購人姓名與送貨日，即可快速查詢對應訂單（任何時間遞交的訂單皆可查詢）。
           </p>
         </div>
 
@@ -150,36 +198,32 @@ export default function OrderList({
       </div>
 
       {/* Search and Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-6">
-        {/* Search bar */}
-        <div className="relative md:col-span-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Name input */}
+        <div className="relative w-full">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-            <Search size={16} />
+            <User size={16} />
           </span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="點此搜尋同仁姓名、月餅口味..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-terracotta text-xs font-semibold text-slate-700 placeholder-slate-400 transition-all"
+            placeholder="請輸入訂購人姓名以查詢..."
+            className="w-full pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-semibold hover:bg-white hover:border-slate-300"
           />
         </div>
 
-        {/* Flavour filter */}
-        <div className="relative md:col-span-4">
-          <select
-            value={filterFlavour}
-            onChange={(e) => setFilterFlavour(e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-natural-border rounded-xl focus:outline-none focus:ring-1 focus:ring-natural-terracotta text-xs font-semibold text-slate-700 appearance-none"
-          >
-            <option value="all">🔍 過濾所有口味 ({orders.length})</option>
-            {uniqueFlavours.map(f => (
-              <option key={f} value={f}>🥮 限顯示：{f}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
-            <span className="text-[10px]">▼</span>
-          </div>
+        {/* Date input */}
+        <div className="relative w-full">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+            <Calendar size={16} />
+          </span>
+          <input
+            type="date"
+            value={searchDate}
+            onChange={(e) => setSearchDate(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-[#FCFAF6] border border-[#E4DDD3] rounded-xl outline-none text-[#2C2C2C] placeholder-slate-400 focus:bg-white focus:border-amber-700/60 focus:ring-2 focus:ring-amber-100 transition-all text-sm font-semibold hover:bg-white hover:border-slate-300 font-mono"
+          />
         </div>
       </div>
 
@@ -189,16 +233,28 @@ export default function OrderList({
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-3 border-natural-terracotta border-t-transparent" />
           <p className="text-xs font-semibold text-slate-500 font-serif">正在與 Google 試算表同步訂單中 ...</p>
         </div>
+      ) : !hasSearched ? (
+        <div className="py-12 text-center text-slate-400 flex flex-col items-center justify-center gap-3 bg-[#FAF8F5]/60 rounded-2xl border border-dashed border-[#E4DDD3]">
+          <div className="p-3.5 bg-white border border-[#E4DDD3] text-amber-800 rounded-2xl shadow-xs">
+            <Search size={22} className="text-amber-800" />
+          </div>
+          <p className="serif text-sm font-bold text-[#5A5A40]">
+            已隱藏訂單明細
+          </p>
+          <p className="text-xs text-slate-400 max-w-md leading-relaxed px-4">
+            已預設隱藏全部訂購明細。請在上方同時輸入<b>「訂購人姓名」</b>與設定<b>「送貨日期」</b>，不限訂單遞交日期，即可即時查閱對應的點單明細資料！
+          </p>
+        </div>
       ) : filteredOrders.length === 0 ? (
         <div className="py-16 text-center text-slate-450 flex flex-col items-center justify-center gap-2">
           <div className="p-4 bg-natural-header border border-natural-border/40 text-natural-accent rounded-2xl">
             <Search size={32} />
           </div>
           <p className="serif text-sm font-bold text-[#5A5A40]">
-            {searchQuery || filterFlavour !== 'all' ? '找不到符合搜尋條件的訂單' : '今天尚未有同仁遞交訂單喔！'}
+            找不到符合搜尋條件的訂單
           </p>
           <p className="text-xs text-slate-405">
-            {searchQuery || filterFlavour !== 'all' ? '請嘗試清除關鍵字或口味過濾條件。' : '點擊上方填寫月餅點單，提交今日第一筆訂單！'}
+            請確認您輸入的訂購人姓名與送貨日期是否正確。
           </p>
         </div>
       ) : (
@@ -219,6 +275,7 @@ export default function OrderList({
               <tbody className="divide-y divide-natural-border text-xs text-slate-700">
                 {filteredOrders.map((order) => {
                   const isDeleting = deleteConfirmId === order.orderId;
+                  const locked = isOrderLocked(order.deliveryDate);
                   
                   return (
                     <tr 
@@ -256,8 +313,15 @@ export default function OrderList({
                             </div>
                           )}
                           {order.deliveryDate && (
-                            <div className="text-[11px] text-amber-700 font-bold flex items-center gap-1">
-                              <span className="text-amber-500 select-none">📅</span> 送貨日：{order.deliveryDate}
+                            <div className="text-[11px] text-amber-700 font-bold flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1">
+                                <span className="text-amber-500 select-none">📅</span> 送貨日：{order.deliveryDate}
+                              </div>
+                              {locked && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-red-500 font-semibold bg-red-50 border border-red-100 rounded-md px-1.5 py-0.5 mt-1 w-fit">
+                                  🔒 送貨前30天內 (已鎖定修改/刪除)
+                                </span>
+                              )}
                             </div>
                           )}
                           {!order.phone && !order.email && !order.address && !order.deliveryDate && (
@@ -271,7 +335,7 @@ export default function OrderList({
                         <div className="flex items-center gap-2.5">
                           <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-natural-border shrink-0 select-none shadow-xs">
                             <img 
-                              src={getOrderItemImage(order.mooncakes || "廣式蓮蓉月餅")} 
+                              src={getOrderItemImage(order.mooncakes || (order as any).drink || "廣式蓮蓉月餅")} 
                               alt={order.mooncakes || "月餅"}
                               referrerPolicy="no-referrer"
                               className="w-full h-full object-cover"
@@ -282,7 +346,7 @@ export default function OrderList({
                           </div>
                           <div>
                             <span className="font-serif font-bold text-[#2C2C2C] block">
-                              {order.mooncakes || "廣式蓮蓉月餅"}
+                              {order.mooncakes || (order as any).drink || "廣式蓮蓉月餅"}
                             </span>
                           </div>
                         </div>
@@ -318,16 +382,26 @@ export default function OrderList({
                         ) : (
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => onEdit(order)}
-                              className="text-natural-accent hover:bg-natural-accent/10 rounded-lg p-1.5 cursor-pointer"
-                              title="修改此筆訂單"
+                              onClick={() => !locked && onEdit(order)}
+                              disabled={locked}
+                              className={`rounded-lg p-1.5 transition-colors ${
+                                locked 
+                                  ? 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-50' 
+                                  : 'text-natural-accent hover:bg-natural-accent/10 cursor-pointer'
+                              }`}
+                              title={locked ? "送貨日前30天內不開放修改" : "修改此筆訂單"}
                             >
                               <Edit2 size={14} />
                             </button>
                             <button
-                              onClick={(e) => handleDeleteTrigger(e, order.orderId)}
-                              className="text-natural-terracotta hover:bg-natural-terracotta/10 rounded-lg p-1.5 cursor-pointer"
-                              title="刪除此筆訂單"
+                              onClick={(e) => !locked && handleDeleteTrigger(e, order.orderId)}
+                              disabled={locked}
+                              className={`rounded-lg p-1.5 transition-colors ${
+                                locked 
+                                  ? 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-50' 
+                                  : 'text-natural-terracotta hover:bg-natural-terracotta/10 cursor-pointer'
+                              }`}
+                              title={locked ? "送貨日前30天內不開放刪除" : "刪除此筆訂單"}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -345,6 +419,7 @@ export default function OrderList({
           <div className="lg:hidden space-y-3">
             {filteredOrders.map((order) => {
               const isDeleting = deleteConfirmId === order.orderId;
+              const locked = isOrderLocked(order.deliveryDate);
               
               return (
                 <div 
@@ -383,14 +458,26 @@ export default function OrderList({
                       ) : (
                         <>
                           <button
-                            onClick={() => onEdit(order)}
-                            className="p-2 text-natural-accent bg-white hover:bg-slate-50 rounded-xl border border-natural-border transition-colors cursor-pointer"
+                            onClick={() => !locked && onEdit(order)}
+                            disabled={locked}
+                            className={`p-2 rounded-xl border transition-colors ${
+                              locked 
+                                ? 'text-slate-300 bg-slate-50 border-slate-200 cursor-not-allowed opacity-50' 
+                                : 'text-natural-accent bg-white hover:bg-slate-50 border-natural-border cursor-pointer'
+                            }`}
+                            title={locked ? "送貨日前30天內不開放修改" : "修改此筆訂單"}
                           >
                             <Edit2 size={13} />
                           </button>
                           <button
-                            onClick={(e) => handleDeleteTrigger(e, order.orderId)}
-                            className="p-2 text-natural-terracotta bg-white hover:bg-slate-50 rounded-xl border border-natural-border transition-colors cursor-pointer"
+                            onClick={(e) => !locked && handleDeleteTrigger(e, order.orderId)}
+                            disabled={locked}
+                            className={`p-2 rounded-xl border transition-colors ${
+                              locked 
+                                ? 'text-slate-300 bg-slate-50 border-slate-200 cursor-not-allowed opacity-50' 
+                                : 'text-natural-terracotta bg-white hover:bg-slate-50 border-natural-border cursor-pointer'
+                            }`}
+                            title={locked ? "送貨日前30天內不開放刪除" : "刪除此筆訂單"}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -418,8 +505,15 @@ export default function OrderList({
                         </div>
                       )}
                       {order.deliveryDate && (
-                        <div className="flex items-center gap-1.5 text-[11px] text-amber-750 font-bold">
-                          <span className="text-amber-500 select-none">📅</span> 送貨日：{order.deliveryDate}
+                        <div className="flex flex-col gap-1 text-[11px] text-amber-750 font-bold">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-amber-500 select-none">📅</span> 送貨日：{order.deliveryDate}
+                          </div>
+                          {locked && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-red-500 font-semibold bg-red-50 border border-red-100 rounded-md px-1.5 py-0.5 w-fit mt-0.5">
+                              🔒 送貨前30天內 (已鎖定修改/刪除)
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -429,7 +523,7 @@ export default function OrderList({
                   <div className="text-xs bg-white rounded-xl border border-natural-border p-3 flex items-center gap-3">
                     <div className="relative w-11 h-11 rounded-lg overflow-hidden bg-slate-100 border border-natural-border shrink-0 select-none shadow-xs">
                       <img 
-                        src={getOrderItemImage(order.mooncakes || "廣式蓮蓉月餅")} 
+                        src={getOrderItemImage(order.mooncakes || (order as any).drink || "廣式蓮蓉月餅")} 
                         alt={order.mooncakes || "月餅"}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
@@ -440,7 +534,7 @@ export default function OrderList({
                     </div>
                     <div>
                       <span className="font-serif font-bold text-[#2C2C2C] block text-[13.5px]">
-                        {order.mooncakes || "廣式蓮蓉月餅"}
+                        {order.mooncakes || (order as any).drink || "廣式蓮蓉月餅"}
                       </span>
                     </div>
                   </div>
@@ -448,7 +542,7 @@ export default function OrderList({
                   {/* Quantitative pricing */}
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-dashed border-natural-border">
                     <div className="text-gray-400 font-semibold font-mono text-[10px]">
-                      單價：${menu.find(m => m.name === order.mooncakes)?.price || 0} / 盒
+                      單價：${menu.find(m => m.name === (order.mooncakes || (order as any).drink))?.price || 0} / 盒
                     </div>
                     <div className="flex items-baseline gap-2">
                       <span className="text-slate-500 font-mono font-medium">共 {order.quantity} 盒</span>
