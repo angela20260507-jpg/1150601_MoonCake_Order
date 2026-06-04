@@ -13,7 +13,6 @@ import { DEFAULT_MENU, INITIAL_MOCK_ORDERS } from './data/mockData';
 import OrderForm from './components/OrderForm';
 import OrderList from './components/OrderList';
 import Statistics from './components/Statistics';
-import InstructionSection from './components/InstructionSection';
 
 interface BannerAlert {
   id: string;
@@ -475,18 +474,8 @@ export default function App() {
       {/* Main container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
         
-        {/* Instruction instructions & configuration card */}
-        <InstructionSection 
-          gasUrl={gasUrl}
-          onSaveUrl={handleSaveGasUrl}
-          isTestingUrl={isTestingUrl}
-          testError={testError}
-          testSuccess={testSuccess}
-          onTestConnection={handleTestConnection}
-        />
-
         {/* Dynamic Statistical Metrics Section */}
-        <Statistics orders={orders} menu={menu} />
+        <Statistics orders={orders} />
 
         {/* Spacious layout stack dividing OrderForm and OrderList */}
         <div className="space-y-10">
